@@ -16,6 +16,7 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
   const [lessonProgress, setLessonProgress] = useState(0);
   const [userInput, setUserInput] = useState("");
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
+  const [hasStarted, setHasStarted] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -93,6 +94,7 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
       'start': [
         'Initializing training sequence...',
         'Loading lesson content...',
+        'Training module activated.',
         '----------------------------------------'
       ]
     };
@@ -105,19 +107,18 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
     setLines(prev => [...prev, `> ${command}`]);
 
     // Handle special 'start' command for lesson progression
-    if (command === 'start') {
-      if (currentLesson === 0 && lessonProgress === 0) {
-        setLines(prev => [...prev, ...simulateCommandOutput('start')]);
-        setTimeout(() => {
-          setCurrentLesson(1);
-          setLines(prev => [
-            ...prev,
-            "----------------------------------------",
-            ...lessons[1].content
-          ]);
-        }, 1000);
-        return;
-      }
+    if (command === 'start' && !hasStarted) {
+      setHasStarted(true);
+      setLines(prev => [...prev, ...simulateCommandOutput('start')]);
+      setTimeout(() => {
+        setCurrentLesson(1);
+        setLines(prev => [
+          ...prev,
+          "----------------------------------------",
+          ...lessons[1].content
+        ]);
+      }, 1000);
+      return;
     }
 
     // Handle built-in commands
@@ -185,6 +186,14 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
 
   useEffect(() => {
     if (open) {
+      // Reset state when dialog opens
+      setLines([]);
+      setCurrentLesson(0);
+      setLessonProgress(0);
+      setUserInput("");
+      setCompletedLessons(new Set());
+      setHasStarted(false);
+
       // Initial system messages
       setLines([
         `INITIALIZING ${system.toUpperCase()} TRAINING PROTOCOL...`,
@@ -204,16 +213,8 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
           inputRef.current.focus();
         }
       }, 100);
-
-      return () => {
-        setLines([]);
-        setCurrentLesson(0);
-        setLessonProgress(0);
-        setUserInput("");
-        setCompletedLessons(new Set());
-      };
     }
-  }, [open, system, currentLessonData]);
+  }, [open, system]);
 
   // Scroll to bottom whenever lines change
   useEffect(() => {
