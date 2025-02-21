@@ -25,6 +25,73 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
     setLines(prev => [...prev, `${prefix} ${message}`]);
   };
 
+  const simulateCommandOutput = (command: string) => {
+    // Simulated command outputs
+    const outputs: Record<string, string[]> = {
+      'pwd': ['/home/hacker'],
+      'ls': ['documents/', 'downloads/', 'hack.txt', 'secret.key'],
+      'cd': ['Directory changed'],
+      'mkdir': ['Directory created successfully'],
+      'touch': ['File created successfully'],
+      'cat': [
+        'Reading file contents...',
+        '--------------------',
+        'root:x:0:0:root:/root:/bin/bash',
+        'daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin',
+        '--------------------'
+      ],
+      'chmod': ['Changed file permissions'],
+      'ls -l': [
+        'total 20',
+        'drwxr-xr-x 2 hacker hacker 4096 Feb 21 12:34 documents',
+        'drwxr-xr-x 2 hacker hacker 4096 Feb 21 12:34 downloads',
+        '-rw-r--r-- 1 hacker hacker  220 Feb 21 12:34 hack.txt',
+        '-rw-r--r-- 1 hacker hacker  220 Feb 21 12:34 secret.key'
+      ],
+      'sudo': ['[sudo] password for hacker: ', 'Access granted'],
+      'ping': [
+        'PING localhost (127.0.0.1) 56(84) bytes of data.',
+        '64 bytes from localhost (127.0.0.1): icmp_seq=1 ttl=64 time=0.034 ms',
+        '64 bytes from localhost (127.0.0.1): icmp_seq=2 ttl=64 time=0.045 ms'
+      ],
+      'ifconfig': [
+        'eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500',
+        '        inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255',
+        '        ether 00:11:22:33:44:55  txqueuelen 1000  (Ethernet)'
+      ],
+      'netstat': [
+        'Active Internet connections (servers and established)',
+        'Proto Recv-Q Send-Q Local Address           Foreign Address         State',
+        'tcp        0      0 localhost:80            0.0.0.0:*               LISTEN',
+        'tcp        0      0 localhost:443           0.0.0.0:*               LISTEN'
+      ],
+      'base64': ['c2VjcmV0', 'Encoded message'],
+      'md5sum': ['5ebe2294ecd0e0f08eab7690d2a6ee69', 'MD5 hash generated'],
+      'sha256sum': [
+        '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+        'SHA256 hash generated'
+      ],
+      'help': [
+        'Available commands:',
+        '- help     : Show this help message',
+        '- clear    : Clear terminal',
+        '- progress : Show your progress',
+        '- start    : Begin the lesson',
+        '- pwd      : Show current directory',
+        '- ls       : List files',
+        '- cd       : Change directory',
+        '- cat      : View file contents',
+        '- mkdir    : Create directory',
+        '- touch    : Create file',
+        '- chmod    : Change permissions',
+        '- sudo     : Superuser access',
+        '----------------------------------------'
+      ]
+    };
+
+    return outputs[command] || [`Command executed: ${command}`];
+  };
+
   useEffect(() => {
     if (open) {
       // Initial system messages
@@ -44,37 +111,37 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
         if (e.key === 'Enter') {
           const command = userInput.trim().toLowerCase();
 
-          // Process command
-          if (command === 'help') {
-            setLines(prev => [
-              ...prev,
-              "> help",
-              "Available commands:",
-              "- help     : Show this help message",
-              "- clear    : Clear terminal",
-              "- progress : Show your progress",
-              "- exit     : Exit current lesson",
-              "----------------------------------------"
-            ]);
-          } else if (command === 'clear') {
+          // Add command to terminal history
+          setLines(prev => [...prev, `> ${command}`]);
+
+          // Handle built-in commands
+          if (command === 'clear') {
             setLines([]);
           } else if (command === 'progress') {
             const totalLessons = lessons.length;
             const completed = completedLessons.size;
             setLines(prev => [
               ...prev,
-              "> progress",
               `Progress: ${completed}/${totalLessons} lessons completed`,
               `Current lesson: ${currentLessonData.title}`,
               `Commands mastered: ${Array.from(completedLessons).join(', ')}`,
               "----------------------------------------"
             ]);
-          } else if (currentLessonData.commands.includes(command)) {
-            addSystemMessage(`Executing: ${command}`, 'info');
+          } else if (command === 'help') {
+            setLines(prev => [...prev, ...simulateCommandOutput('help')]);
+          } else {
+            // Check if command matches current lesson
+            const isValidCommand = currentLessonData.commands.some(cmd => 
+              command === cmd || command.startsWith(`${cmd} `)
+            );
 
-            setTimeout(() => {
+            if (isValidCommand) {
+              // Show simulated output
+              const output = simulateCommandOutput(command);
+              setLines(prev => [...prev, ...output]);
+
               addSystemMessage(`Command '${command}' executed successfully`, 'success');
-              setCompletedLessons(prev => new Set([...prev, command]));
+              setCompletedLessons(prev => new Set([...prev, command.split(' ')[0]]));
 
               if (lessonProgress < currentLessonData.commands.length - 1) {
                 setLessonProgress(prev => prev + 1);
@@ -103,10 +170,10 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
                   "----------------------------------------"
                 ]);
               }
-            }, 500);
-          } else {
-            addSystemMessage(`Command not recognized: ${command}`, 'error');
-            addSystemMessage("Type 'help' for available commands", 'info');
+            } else {
+              addSystemMessage(`Command not recognized: ${command}`, 'error');
+              addSystemMessage("Type 'help' for available commands", 'info');
+            }
           }
           setUserInput("");
         } else if (e.key === 'Backspace') {
