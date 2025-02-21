@@ -2,6 +2,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import ScrambleText from "./ScrambleText";
 import GlowingText from "./GlowingText";
+import { hackingLessons } from "@/lib/hackingLessons";
 
 interface TerminalDialogProps {
   open: boolean;
@@ -9,70 +10,88 @@ interface TerminalDialogProps {
   system: string;
 }
 
-const HACKING_MESSAGES = [
-  "ACCESSING MAINFRAME...",
-  "BYPASSING FIREWALL...",
-  "DECRYPTING PROTOCOLS...",
-  "INJECTING PAYLOAD...",
-  "EXTRACTING DATA...",
-  "COMPROMISING SECURITY...",
-  "INFILTRATING NETWORK...",
-  "SCANNING PORTS...",
-  "DEPLOYING BACKDOOR...",
-  "EXECUTING EXPLOIT..."
-];
-
 const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => {
   const [lines, setLines] = useState<string[]>([]);
-  const [lastKeypress, setLastKeypress] = useState("");
+  const [currentLesson, setCurrentLesson] = useState(0);
+  const [lessonProgress, setLessonProgress] = useState(0);
+  const [userInput, setUserInput] = useState("");
+
+  const lessons = hackingLessons[system]?.lessons || hackingLessons.terminal.lessons;
+  const currentLessonData = lessons[currentLesson];
 
   useEffect(() => {
     if (open) {
-      const responses: Record<string, string[]> = {
-        "terminal": [
-          "INITIALIZING TERMINAL ACCESS...",
-          "ESTABLISHING SECURE CONNECTION...",
-          "TERMINAL READY. START TYPING TO HACK...",
-        ],
-        "security": [
-          "SCANNING SECURITY PROTOCOLS...",
-          "BYPASSING FIREWALL SYSTEMS...",
-          "SECURITY MATRIX ENGAGED. START TYPING TO HACK...",
-        ],
-        "encryption": [
-          "LOADING ENCRYPTION ALGORITHMS...",
-          "GENERATING QUANTUM KEYS...",
-          "CRYPTOGRAPHIC SYSTEMS ONLINE. START TYPING TO HACK...",
-        ]
-      };
-
-      const systemLines = responses[system] || responses.terminal;
-      let currentLine = 0;
-
-      const interval = setInterval(() => {
-        if (currentLine < systemLines.length) {
-          setLines(prev => [...prev, systemLines[currentLine]]);
-          currentLine++;
-        } else {
-          clearInterval(interval);
-        }
-      }, 1000);
+      // Initial system messages
+      setLines([
+        `INITIALIZING ${system.toUpperCase()} TRAINING PROTOCOL...`,
+        "ESTABLISHING SECURE CONNECTION...",
+        `WELCOME TO ${hackingLessons[system]?.name.toUpperCase() || "HACKING"} TRAINING`,
+        "----------------------------------------",
+        ...currentLessonData.content
+      ]);
 
       const handleKeyPress = (e: KeyboardEvent) => {
-        setLastKeypress(e.key);
-        const randomMessage = HACKING_MESSAGES[Math.floor(Math.random() * HACKING_MESSAGES.length)];
-        setLines(prev => [...prev, randomMessage]);
+        if (e.key === 'Enter') {
+          const command = userInput.trim().toLowerCase();
+
+          // Process command
+          if (currentLessonData.commands.includes(command)) {
+            setLines(prev => [
+              ...prev,
+              `> ${command}`,
+              `Successfully executed: ${command}`,
+              currentLessonData.hints[lessonProgress] || "Good work! Keep practicing."
+            ]);
+
+            if (lessonProgress < currentLessonData.commands.length - 1) {
+              setLessonProgress(prev => prev + 1);
+            } else if (currentLesson < lessons.length - 1) {
+              setLines(prev => [
+                ...prev,
+                "----------------------------------------",
+                "LESSON COMPLETE! Loading next lesson...",
+                "----------------------------------------"
+              ]);
+              setTimeout(() => {
+                setCurrentLesson(prev => prev + 1);
+                setLessonProgress(0);
+              }, 2000);
+            } else {
+              setLines(prev => [
+                ...prev,
+                "----------------------------------------",
+                "CONGRATULATIONS! You've completed all lessons!",
+                "You're now equipped with basic hacking knowledge.",
+                "Remember to use these skills responsibly!",
+                "----------------------------------------"
+              ]);
+            }
+          } else {
+            setLines(prev => [
+              ...prev,
+              `> ${command}`,
+              "Invalid command. Try one of the suggested commands."
+            ]);
+          }
+          setUserInput("");
+        } else if (e.key === 'Backspace') {
+          setUserInput(prev => prev.slice(0, -1));
+        } else if (e.key.length === 1) {
+          setUserInput(prev => prev + e.key);
+        }
       };
 
       window.addEventListener('keydown', handleKeyPress);
 
       return () => {
-        clearInterval(interval);
         window.removeEventListener('keydown', handleKeyPress);
         setLines([]);
+        setCurrentLesson(0);
+        setLessonProgress(0);
+        setUserInput("");
       };
     }
-  }, [open, system]);
+  }, [open, system, currentLesson, currentLessonData, lessonProgress]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -83,7 +102,7 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
         >
           {lines.map((line, index) => (
             <div key={index} className="mb-2">
-              <span className="text-green-600 mr-2">&gt;</span>
+              <span className="text-green-600 mr-2">{line.startsWith('>') ? '' : '>'}</span>
               <ScrambleText 
                 text={line} 
                 speed={25} 
@@ -91,12 +110,11 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
               />
             </div>
           ))}
-          {lastKeypress && (
-            <div className="text-green-400 opacity-50 mb-2 text-sm sm:text-base">
-              KEY PRESSED: {lastKeypress.toUpperCase()}
-            </div>
-          )}
-          <div className="animate-pulse">_</div>
+          <div className="flex items-center">
+            <span className="text-green-600 mr-2">&gt;</span>
+            <span className="text-green-500 text-sm sm:text-base">{userInput}</span>
+            <span className="animate-pulse ml-1">_</span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
