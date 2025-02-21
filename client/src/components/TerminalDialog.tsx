@@ -58,7 +58,6 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
         }
       }, 1000);
 
-      // Add keyboard event listener
       const handleKeyPress = (e: KeyboardEvent) => {
         setLastKeypress(e.key);
         const randomMessage = HACKING_MESSAGES[Math.floor(Math.random() * HACKING_MESSAGES.length)];
@@ -77,16 +76,23 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-black/90 border-green-500/50 max-w-2xl w-full">
-        <div className="font-mono text-green-500 p-4 h-[300px] overflow-auto" id="terminal-content">
+      <DialogContent className="bg-black/90 border-green-500/50 w-[95vw] sm:w-[85vw] md:w-[75vw] max-w-2xl mx-auto">
+        <div 
+          className="font-mono text-green-500 p-3 sm:p-4 h-[50vh] sm:h-[60vh] md:h-[70vh] overflow-auto scrollbar-thin scrollbar-thumb-green-500 scrollbar-track-transparent" 
+          id="terminal-content"
+        >
           {lines.map((line, index) => (
             <div key={index} className="mb-2">
               <span className="text-green-600 mr-2">&gt;</span>
-              <ScrambleText text={line} speed={25} />
+              <ScrambleText 
+                text={line} 
+                speed={25} 
+                className="text-sm sm:text-base"
+              />
             </div>
           ))}
           {lastKeypress && (
-            <div className="text-green-400 opacity-50 mb-2">
+            <div className="text-green-400 opacity-50 mb-2 text-sm sm:text-base">
               KEY PRESSED: {lastKeypress.toUpperCase()}
             </div>
           )}
