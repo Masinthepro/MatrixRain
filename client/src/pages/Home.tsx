@@ -2,9 +2,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import GlowingText from "@/components/GlowingText";
 import ScrambleText from "@/components/ScrambleText";
+import TerminalDialog from "@/components/TerminalDialog";
 import { Terminal, Shield, Lock } from "lucide-react";
+import { useState } from "react";
 
 export default function Home() {
+  const [activeSystem, setActiveSystem] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleInitialize = (system: string) => {
+    setActiveSystem(system);
+    setDialogOpen(true);
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-16">
       <div className="text-center mb-12">
@@ -22,16 +32,19 @@ export default function Home() {
             icon: Terminal,
             title: "Terminal Access",
             description: "Direct system interface protocol",
+            system: "terminal"
           },
           {
             icon: Shield,
             title: "Security Matrix",
             description: "Firewall penetration systems",
+            system: "security"
           },
           {
             icon: Lock,
             title: "Encryption Keys",
             description: "Advanced cryptographic algorithms",
+            system: "encryption"
           },
         ].map((item, index) => (
           <Card
@@ -44,9 +57,10 @@ export default function Home() {
               <p className="text-green-400/80 font-mono text-sm">
                 {item.description}
               </p>
-              <Button
+              <Button 
                 variant="outline"
                 className="mt-4 border-green-500/50 hover:border-green-500 text-green-500 hover:text-green-400"
+                onClick={() => handleInitialize(item.system)}
               >
                 Initialize
               </Button>
@@ -54,6 +68,12 @@ export default function Home() {
           </Card>
         ))}
       </div>
+
+      <TerminalDialog 
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        system={activeSystem || 'terminal'}
+      />
     </div>
   );
 }
