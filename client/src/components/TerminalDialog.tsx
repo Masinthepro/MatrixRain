@@ -15,9 +15,15 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
   const [currentLesson, setCurrentLesson] = useState(0);
   const [lessonProgress, setLessonProgress] = useState(0);
   const [userInput, setUserInput] = useState("");
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
 
   const lessons = hackingLessons[system]?.lessons || hackingLessons.terminal.lessons;
   const currentLessonData = lessons[currentLesson];
+
+  const addSystemMessage = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const prefix = type === 'success' ? '[SUCCESS]' : type === 'error' ? '[ERROR]' : '[SYSTEM]';
+    setLines(prev => [...prev, `${prefix} ${message}`]);
+  };
 
   useEffect(() => {
     if (open) {
@@ -25,7 +31,11 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
       setLines([
         `INITIALIZING ${system.toUpperCase()} TRAINING PROTOCOL...`,
         "ESTABLISHING SECURE CONNECTION...",
+        "BYPASSING SECURITY MEASURES...",
+        "ACCESS GRANTED",
+        "----------------------------------------",
         `WELCOME TO ${hackingLessons[system]?.name.toUpperCase() || "HACKING"} TRAINING`,
+        `CURRENT PATH: ${hackingLessons[system]?.description}`,
         "----------------------------------------",
         ...currentLessonData.content
       ]);
@@ -35,43 +45,68 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
           const command = userInput.trim().toLowerCase();
 
           // Process command
-          if (currentLessonData.commands.includes(command)) {
+          if (command === 'help') {
             setLines(prev => [
               ...prev,
-              `> ${command}`,
-              `Successfully executed: ${command}`,
-              currentLessonData.hints[lessonProgress] || "Good work! Keep practicing."
+              "> help",
+              "Available commands:",
+              "- help     : Show this help message",
+              "- clear    : Clear terminal",
+              "- progress : Show your progress",
+              "- exit     : Exit current lesson",
+              "----------------------------------------"
             ]);
+          } else if (command === 'clear') {
+            setLines([]);
+          } else if (command === 'progress') {
+            const totalLessons = lessons.length;
+            const completed = completedLessons.size;
+            setLines(prev => [
+              ...prev,
+              "> progress",
+              `Progress: ${completed}/${totalLessons} lessons completed`,
+              `Current lesson: ${currentLessonData.title}`,
+              `Commands mastered: ${Array.from(completedLessons).join(', ')}`,
+              "----------------------------------------"
+            ]);
+          } else if (currentLessonData.commands.includes(command)) {
+            addSystemMessage(`Executing: ${command}`, 'info');
 
-            if (lessonProgress < currentLessonData.commands.length - 1) {
-              setLessonProgress(prev => prev + 1);
-            } else if (currentLesson < lessons.length - 1) {
-              setLines(prev => [
-                ...prev,
-                "----------------------------------------",
-                "LESSON COMPLETE! Loading next lesson...",
-                "----------------------------------------"
-              ]);
-              setTimeout(() => {
-                setCurrentLesson(prev => prev + 1);
-                setLessonProgress(0);
-              }, 2000);
-            } else {
-              setLines(prev => [
-                ...prev,
-                "----------------------------------------",
-                "CONGRATULATIONS! You've completed all lessons!",
-                "You're now equipped with basic hacking knowledge.",
-                "Remember to use these skills responsibly!",
-                "----------------------------------------"
-              ]);
-            }
+            setTimeout(() => {
+              addSystemMessage(`Command '${command}' executed successfully`, 'success');
+              setCompletedLessons(prev => new Set([...prev, command]));
+
+              if (lessonProgress < currentLessonData.commands.length - 1) {
+                setLessonProgress(prev => prev + 1);
+                addSystemMessage(currentLessonData.hints[lessonProgress], 'info');
+              } else if (currentLesson < lessons.length - 1) {
+                setLines(prev => [
+                  ...prev,
+                  "----------------------------------------",
+                  "CONGRATULATIONS! LESSON COMPLETE!",
+                  "Initializing next training module...",
+                  "----------------------------------------"
+                ]);
+                setTimeout(() => {
+                  setCurrentLesson(prev => prev + 1);
+                  setLessonProgress(0);
+                  setLines(prev => [...prev, ...lessons[currentLesson + 1].content]);
+                }, 2000);
+              } else {
+                setLines(prev => [
+                  ...prev,
+                  "----------------------------------------",
+                  "TRAINING COMPLETE! You've mastered all lessons!",
+                  `You are now a certified ${hackingLessons[system]?.name}`,
+                  "Remember: With great power comes great responsibility.",
+                  "Use these skills ethically and legally.",
+                  "----------------------------------------"
+                ]);
+              }
+            }, 500);
           } else {
-            setLines(prev => [
-              ...prev,
-              `> ${command}`,
-              "Invalid command. Try one of the suggested commands."
-            ]);
+            addSystemMessage(`Command not recognized: ${command}`, 'error');
+            addSystemMessage("Type 'help' for available commands", 'info');
           }
           setUserInput("");
         } else if (e.key === 'Backspace') {
@@ -89,9 +124,10 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
         setCurrentLesson(0);
         setLessonProgress(0);
         setUserInput("");
+        setCompletedLessons(new Set());
       };
     }
-  }, [open, system, currentLesson, currentLessonData, lessonProgress]);
+  }, [open, system, currentLesson, currentLessonData, lessonProgress, completedLessons]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,7 +142,12 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
               <ScrambleText 
                 text={line} 
                 speed={25} 
-                className="text-sm sm:text-base"
+                className={`text-sm sm:text-base ${
+                  line.startsWith('[SUCCESS]') ? 'text-green-400' :
+                  line.startsWith('[ERROR]') ? 'text-red-400' :
+                  line.startsWith('[SYSTEM]') ? 'text-blue-400' :
+                  'text-green-500'
+                }`}
               />
             </div>
           ))}
