@@ -104,6 +104,22 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
     // Add command to terminal history
     setLines(prev => [...prev, `> ${command}`]);
 
+    // Handle special 'start' command for lesson progression
+    if (command === 'start') {
+      if (currentLesson === 0 && lessonProgress === 0) {
+        setLines(prev => [...prev, ...simulateCommandOutput('start')]);
+        setTimeout(() => {
+          setCurrentLesson(1);
+          setLines(prev => [
+            ...prev,
+            "----------------------------------------",
+            ...lessons[1].content
+          ]);
+        }, 1000);
+        return;
+      }
+    }
+
     // Handle built-in commands
     if (command === 'clear') {
       setLines([]);
@@ -189,11 +205,6 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
         }
       }, 100);
 
-      // Scroll to bottom when content changes
-      if (contentRef.current) {
-        contentRef.current.scrollTop = contentRef.current.scrollHeight;
-      }
-
       return () => {
         setLines([]);
         setCurrentLesson(0);
@@ -202,7 +213,7 @@ const TerminalDialog = ({ open, onOpenChange, system }: TerminalDialogProps) => 
         setCompletedLessons(new Set());
       };
     }
-  }, [open, system, currentLesson, currentLessonData]);
+  }, [open, system, currentLessonData]);
 
   // Scroll to bottom whenever lines change
   useEffect(() => {
